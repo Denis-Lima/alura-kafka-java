@@ -35,8 +35,6 @@ public class KafkaDispatcher<T> implements AutoCloseable {
             System.out.println("Sucesso enviando " + data.topic() + ":::partition " + data.partition() + "/ offset " + data.offset() + "/ timestamp" + data.timestamp());
         };
 
-        var email = "Thank you for your order! We are processing your order!";
-        var emailRecord = new ProducerRecord<>("ECOMMERCE_SEND_EMAIL", key, email);
         producer.send(record, callback).get();
     }
 
