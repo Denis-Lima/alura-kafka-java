@@ -1,44 +1,24 @@
 package com.felelima.ecommerce;
 
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringSerializer;
-
-import java.util.Map;
-import java.util.Properties;
+import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class NewOrderMain {
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        var producer = new KafkaProducer<String, String>(properties());
+        try(var orderDispatcher = new KafkaDispatcher<Order>(); var emailDispatcher = new KafkaDispatcher<String>()) {
+            for (var i = 0; i < 10; i++) {
+                var userId = UUID.randomUUID().toString();
+                var orderId = UUID.randomUUID().toString();
+                var amount = BigDecimal.valueOf(Math.random() * 5000 + 1);
+                var order = new Order(userId, orderId, amount);
+                orderDispatcher.send("ECOMMERCE_NEW_ORDER", userId, order);
 
-        for (var i = 0; i < 100; i++) {
-            var key = UUID.randomUUID().toString();
-            var value = key + ",321321421,421412421";
-            var record = new ProducerRecord<>("ECOMMERCE_NEW_ORDER", key, value);
-            Callback callback = (data, ex) -> {
-                if (ex != null) {
-                    ex.printStackTrace();
-                    return;
-                }
-                System.out.println("Sucesso enviando " + data.topic() + ":::partition " + data.partition() + "/ offset " + data.offset() + "/ timestamp" + data.timestamp());
-            };
-
-            var email = "Thank you for your order! We are processing your order!";
-            var emailRecord = new ProducerRecord<>("ECOMMERCE_SEND_EMAIL", key, email);
-            producer.send(record, callback).get();
-            producer.send(emailRecord, callback).get();
+                var email = "Thank you for your order! We are processing your order!";
+                emailDispatcher.send("ECOMMERCE_SEND_EMAIL", userId, email);
+            }
         }
     }
 
-    private static Properties properties() {
-        var properties = new Properties();
-        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
-        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        return properties;
-    }
+
 }
